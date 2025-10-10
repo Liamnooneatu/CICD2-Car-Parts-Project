@@ -7,7 +7,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello, FastAPI is running!"}
+    return {"message": "Hello, FastAPI is running, please enter part u are searching for u!"}
 
 
 @app.get("/api/users")
@@ -37,7 +37,6 @@ def update_user(user_id: int, updated_user: User):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 
-# DELETE: remove user
 @app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int):
     for index, u in enumerate(users):
@@ -47,7 +46,6 @@ def delete_user(user_id: int):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 
-# HEALTH CHECK
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
