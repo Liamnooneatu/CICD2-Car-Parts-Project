@@ -10,6 +10,11 @@ def read_root():
     return {"message": "Hello, FastAPI is running, please enter part u are searching for u!"}
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 @app.get("/api/users")
 def get_users():
     return users
@@ -45,7 +50,3 @@ def delete_user(user_id: int):
             return
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
