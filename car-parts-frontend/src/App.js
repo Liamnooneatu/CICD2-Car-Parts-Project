@@ -1,3 +1,6 @@
+//npm start
+//cd /workspaces/CICD2-Car-Parts-Project/car-parts-frontend
+
 import React, { useState, useEffect } from "react";
 import "./App.css";
 
