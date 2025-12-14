@@ -1,5 +1,6 @@
 # app/schemas.py
-from pydantic import BaseModel, EmailStr, constr, conint
+from typing import Annotated
+from pydantic import BaseModel, EmailStr, Field, StringConstraints, ConfigDict, constr, conint
 
 class User(BaseModel):
     user_id: int

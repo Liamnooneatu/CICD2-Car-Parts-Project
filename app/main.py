@@ -1,18 +1,19 @@
 from fastapi import FastAPI, HTTPException, status
 from .schemas import User
 
+app = FastAPI(title="Service A - Greeting API")
+
 users: list[User] = []
 
-app = FastAPI()
-
-@app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI is running, please enter part u are searching for u!"}
 
 
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "ok"}
+
+@app.get("/api/greet/{name}")
+def greet(name: str):
+    return {"message": f"Hello, {name} from Service A!"}
 
 
 @app.get("/api/users")

@@ -1,0 +1,10 @@
+INFO:     Will watch for changes in these directories: ['/workspaces/CICD2-Car-Parts-Project']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [35591] using StatReload
+INFO:     Started server process [35639]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     80.233.43.253:0 - "GET / HTTP/1.1" 404 Not Found
+INFO:     80.233.43.253:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     80.233.43.253:0 - "GET /docs HTTP/1.1" 200 OK
+INFO:     80.233.43.253:0 - "GET /openapi.json HTTP/1.1" 200 OK
