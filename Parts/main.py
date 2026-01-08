@@ -3,53 +3,36 @@ import aio_pika
 import os
 import json
 
-
-
 from .schemas import Part
 
+app = FastAPI(title="Service A - Parts API")
 parts: list[Part] = []
 
-app = FastAPI()
-
 RABBIT_URL = os.getenv("RABBIT_URL")
+EXCHANGE_NAME = "events_topic"
 
-async def publish_event(queue_name: str, payload: dict):
-    connection = await aio_pika.connect_robust(RABBIT_URL)
-    channel = await connection.channel()
 
-    message = aio_pika.Message(body=json.dumps(payload).encode())
+async def publish_topic_event(routing_key: str, payload: dict):
+    """
+    Publish an event to a RabbitMQ topic exchange.
+    """
+    if not RABBIT_URL:
+        raise RuntimeError("RABBIT_URL is not set. Run: set -a; source .env; set +a")
 
-    await channel.default_exchange.publish(
-        message,
-        routing_key=queue_name
-    )
+    conn = await aio_pika.connect_robust(RABBIT_URL)
+    ch = await conn.channel()
 
-    await connection.close()
+    ex = await ch.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.TOPIC)
 
-@app.post("/api/events/test")
-async def test_event(event: dict):
-    await publish_event("parts_queue", event)
-    return {"status": "Message sent", "event": event}
+    msg = aio_pika.Message(body=json.dumps(payload).encode())
+    await ex.publish(msg, routing_key=routing_key)
 
-@app.post("/api/parts", status_code=status.HTTP_201_CREATED)
-async def add_Part(Part: Part):
-    if any(u.Part_id == Part.Part_id for u in parts):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Part_id already exists")
-    parts.append(Part)
-
-    await publish_event("parts_queue", {
-        "event": "part.created",
-        "part": Part.model_dump()  # if using Pydantic v2
-        # if this errors, use: Part.dict()  (Pydantic v1)
-    })
-
-    return Part
-
+    await conn.close()
 
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello, FastAPI is running, please enter the part u are searching!"}
+    return {"message": "Service A running - Parts API"}
 
 
 @app.get("/health")
@@ -61,34 +44,67 @@ def health_check():
 def get_parts():
     return parts
 
+
 @app.get("/api/parts/{Part_id}")
-def get_Part(Part_id: int):
-    for u in parts:
-        if u.Part_id == Part_id:
-            return u
+def get_part(Part_id: int):
+    for p in parts:
+        if p.Part_id == Part_id:
+            return p
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Part not found")
 
+
 @app.post("/api/parts", status_code=status.HTTP_201_CREATED)
-def add_Part(Part: Part):
-    if any(u.Part_id == Part.Part_id for u in parts):
+async def add_part(part: Part):
+    if any(p.Part_id == part.Part_id for p in parts):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Part_id already exists")
-    parts.append(Part)
-    return Part
+
+    parts.append(part)
+
+    # Publish RabbitMQ topic event
+    await publish_topic_event(
+        "part.created",
+        {"event": "part.created", "part": part.model_dump()}  # if this fails, use part.dict()
+    )
+
+    return part
+
 
 @app.put("/api/parts/{Part_id}")
-def update_Part(Part_id: int, updated_Part: Part):
-    for index, u in enumerate(parts):
-        if u.Part_id == Part_id:
-            parts[index] = updated_Part
-            return updated_Part
+async def update_part(Part_id: int, updated_part: Part):
+    for i, p in enumerate(parts):
+        if p.Part_id == Part_id:
+            parts[i] = updated_part
+
+            # Publish update event (optional but useful for Part B demo)
+            await publish_topic_event(
+                "part.updated",
+                {"event": "part.updated", "part": updated_part.model_dump()}
+            )
+
+            return updated_part
+
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Part not found")
 
 
 @app.delete("/api/parts/{Part_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_Part(Part_id: int):
-    for index, u in enumerate(parts):
-        if u.Part_id == Part_id:
-            parts.pop(index)
+async def delete_part(Part_id: int):
+    for i, p in enumerate(parts):
+        if p.Part_id == Part_id:
+            deleted = parts.pop(i)
+
+            # Publish delete event (optional)
+            await publish_topic_event(
+                "part.deleted",
+                {"event": "part.deleted", "part": deleted.model_dump()}
+            )
+
             return
+
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Part not found")
 
+
+# Simple manual test publisher (optional)
+@app.post("/api/events/test")
+async def test_event(event: dict):
+    await publish_topic_event("part.test", event)
+    return {"status": "Message sent", "event": event}
